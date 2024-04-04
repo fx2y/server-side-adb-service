@@ -1,4 +1,5 @@
 const adbService = require('./adb-service');
+const screenMirroring = require('./screen-mirroring');
 
 async function runDemo() {
     try {
@@ -8,6 +9,10 @@ async function runDemo() {
 
         if (devices.length > 0) {
             const deviceId = devices[0].id;
+
+            // Get device properties
+            const deviceProperties = await adbService.getDeviceProperties(deviceId);
+            console.log('Device properties:', deviceProperties);
 
             // Execute a shell command on the device
             const result = await adbService.executeCommand(deviceId, 'ls -l /sdcard');
