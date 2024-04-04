@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>scrcpy Stream</title>
+</head>
+
+<body>
+  <canvas id="videoCanvas"></canvas>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script>
+    var canvas = document.getElementById('videoCanvas');
+    var context = canvas.getContext('2d');
+
+    var hls = new Hls();
+    hls.loadSource('/stream.m3u8');
+    hls.attachMedia(canvas);
+  </script>
+</body>
+
+</html>
