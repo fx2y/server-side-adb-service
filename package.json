@@ -1,16 +1,25 @@
 {
   "dependencies": {
+    "@yume-chan/adb": "^0.0.23",
+    "@yume-chan/adb-daemon-webusb": "^0.0.23",
+    "@yume-chan/adb-scrcpy": "^0.0.23",
+    "@yume-chan/adb-server-node-tcp": "^0.0.23",
+    "@yume-chan/aoa": "^0.0.23",
+    "@yume-chan/stream-extra": "^0.0.23",
     "adbkit": "^2.11.1",
     "express": "^4.19.2",
     "net": "^1.0.2",
     "scrcpy": "^1.1.6",
+    "usb": "^2.12.1",
     "ws": "^8.16.0"
   },
   "devDependencies": {
+    "@yume-chan/fetch-scrcpy-server": "^0.0.23",
     "jest": "^29.7.0"
   },
   "scripts": {
     "test": "jest",
-    "start": "node adb-demo.js"
-  }
+    "start": "node adb-scrcpy-test.mjs"
+  },
+  "type": "module"
 }
