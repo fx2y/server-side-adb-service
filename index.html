@@ -1,0 +1,54 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Scrcpy Stream</title>
+  </head>
+  <body>
+    <video id="videoPlayer" controls></video>
+    <script>
+      const videoPlayer = document.getElementById("videoPlayer");
+      const stream = new ReadableStream({
+        start(controller) {
+          fetch("http://localhost:3000/")
+            .then(response => {
+              const reader = response.body.getReader();
+              function readChunk() {
+                reader.read().then(({ done, value }) => {
+                  if (done) {
+                    controller.close();
+                    return;
+                  }
+                  controller.enqueue(value);
+                  readChunk();
+                });
+              }
+              readChunk();
+            })
+            .catch(error => {
+              console.error(error);
+              controller.error(error);
+            });
+        }
+      });
+
+      const videoDecoder = new VideoDecoder({
+        output: videoPlayer,
+        codecs: "avc1.42E01E",
+        hardwareAccelerated: true
+      });
+
+      const videoDecoderStream = stream.pipeThrough(new TransformStream({
+        transform(chunk, controller) {
+          videoDecoder.decode(chunk).then(output => {
+            if (output) {
+              controller.enqueue(output);
+            }
+          });
+        }
+      }));
+
+      videoDecoderStream.pipeTo(new WritableStream());
+    </script>
+  </body>
+</html>

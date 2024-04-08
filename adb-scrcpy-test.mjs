@@ -6,6 +6,10 @@ import { ReadableStream, Consumable, DecodeUtf8Stream, SplitStringStream, AbortC
 import { BIN, VERSION } from "@yume-chan/fetch-scrcpy-server";
 import fs from "fs/promises";
 
+import { createServer } from "http";
+import cors from "cors";
+import { WebSocketServer } from "ws";
+
 function createAdbClient() {
     const adbServerAddress = process.env.ADB_SERVER_SOCKET;
     if (adbServerAddress) {
@@ -23,7 +27,14 @@ function createAdbClient() {
     }
 }
 
-async function main() {
+const server = createServer(async (req, res) => {
+    // Enable CORS for all routes
+    cors()(req, res, () => {
+        main(req, res);
+    });
+});
+
+async function main(req, res) {
     const client = new AdbServerClient(createAdbClient());
     const devices = await client.getDevices();
     if (devices.length === 0) {
@@ -144,18 +155,70 @@ async function main() {
         }
     }));
 
-    const videoStream = await sClient.videoStream;
-    const { metadata, stream: videoStream2 } = await options.parseVideoStreamMetadata(videoStream.stream);
+    const webSocketServer = new WebSocketServer({ port: 8080 });
+    const { stream, metadata } = await sClient.videoStream;
+    const reader = stream.getReader();
 
-    console.log(metadata);
+    webSocketServer.on('connection', (ws) => {
+        console.log(metadata);
+        const sendChunk = async () => {
+            const { value, done } = await reader.read();
+            if (done) {
+                ws.close();
+                return;
+            }
+            ws.send(JSON.stringify(value, replacer));
+            setImmediate(sendChunk);
+        };
 
-    const videoPacketStream = videoStream2.pipeThrough(options.createMediaStreamTransformer());
+        sendChunk();
+    });
 
-    videoPacketStream.pipeTo(new WritableStream({
-        write(chunk) {
-            console.log('Video:', chunk.byteLength);
-        }
-    }));
+    // res.setHeader('Content-Type', 'application/json');
+    // res.setHeader('Transfer-Encoding', 'chunked');
+    // webSocketServer.on('connection', (socket) => {
+    //     sClient.videoStream.then(({ stream, metadata }) => {
+    //         console.log(metadata);
+    //         stream.pipeTo(new WritableStream({
+    //             write(chunk) {
+    //                 socket.send(JSON.stringify(chunk, replacer));
+    //                 // if (chunk.type === 'data') {
+    //                 // res.write(JSON.stringify(chunk, replacer));;
+    //                 // console.log('Video:', chunk);
+    //                 // }
+    //             }
+    //         }));
+    //     })
+    // });
+
+    // const videoStream = await sClient.videoStream;
+    // const { metadata, stream: videoStream2 } = await options.parseVideoStreamMetadata(videoStream.stream);
+
+    // console.log(metadata);
+
+    // const videoPacketStream = videoStream2.pipeThrough(options.createMediaStreamTransformer());
+
+    // videoPacketStream.pipeTo(new WritableStream({
+    //     write(chunk) {
+    //         // res.write(chunk.data);
+    //         console.log('Video:', chunk);
+    //     },
+    //     close() {
+    //         // res.end();
+    //         console.log('Video: close');
+    //     }
+    // }));
 }
 
+// Helper function to serialize BigInt values
+const replacer = (key, value) => {
+    if (typeof value === 'bigint') {
+        return value.toString();
+    }
+    return value;
+};
+
 main().catch(console.error);
+// server.listen(8080, () => {
+//     console.log("Server running at http://localhost:8080/");
+// });
